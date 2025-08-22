@@ -1,28 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchProducts, Product } from '../lib/graphql';
 import ProductCard from '../components/ProductCard';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchProducts().then(({ data }) => {
-      setProducts(data.products);
-      setLoading(false);
-    });
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const { data } = await fetchProducts();
+        setProducts(data.products);
+      } catch (err) {
+        setError('Failed to load products. Please try again later.');
+        console.error('Error loading products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
   }, []);
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = useMemo(() => 
+    products.filter((product) =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+    ), 
+    [products, searchTerm]
   );
 
-  const sortedProducts = filteredProducts.sort((a, b) =>
-    a.name.localeCompare(b.name)
+  const sortedProducts = useMemo(() => 
+    filteredProducts.sort((a, b) => a.name.localeCompare(b.name)), 
+    [filteredProducts]
   );
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
+          <p className='text-lg text-gray-600'>Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center'>
+        <div className='text-center max-w-md mx-auto p-6'>
+          <div className='text-red-500 text-6xl mb-4'>⚠️</div>
+          <h1 className='text-2xl font-bold text-gray-900 mb-4'>Oops! Something went wrong</h1>
+          <p className='text-gray-600 mb-6'>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors'
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
@@ -40,23 +90,41 @@ export default function Home() {
 
         {/* Products Section */}
         <div className='mb-8'>
-          <h2 className='text-2xl font-semibold text-gray-900 mb-6'>
-            Featured Products
-          </h2>
-          <div className='mb-4'>
-            <input
-              type='text'
-              placeholder='Search products...'
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-            />
+          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6'>
+            <h2 className='text-2xl font-semibold text-gray-900 mb-4 sm:mb-0'>
+              Featured Products ({sortedProducts.length})
+            </h2>
+            <div className='w-full sm:w-80'>
+              <label htmlFor='search-input' className='sr-only'>
+                Search products
+              </label>
+              <input
+                id='search-input'
+                type='text'
+                placeholder='Search products...'
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors'
+                aria-label='Search products by name or description'
+              />
+            </div>
           </div>
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-            {sortedProducts.map((product: Product, index) => (
-              <ProductCard key={index} product={product} />
-            ))}
-          </div>
+          
+          {sortedProducts.length === 0 ? (
+            <div className='text-center py-12'>
+              <div className='text-gray-400 text-6xl mb-4'>🔍</div>
+              <h3 className='text-xl font-semibold text-gray-600 mb-2'>No products found</h3>
+              <p className='text-gray-500'>
+                Try adjusting your search terms or browse all our products.
+              </p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+              {sortedProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Features Section */}
@@ -73,6 +141,7 @@ export default function Home() {
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
+                    aria-hidden='true'
                   >
                     <path
                       strokeLinecap='round'
@@ -96,6 +165,7 @@ export default function Home() {
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
+                    aria-hidden='true'
                   >
                     <path
                       strokeLinecap='round'
@@ -117,6 +187,7 @@ export default function Home() {
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
+                    aria-hidden='true'
                   >
                     <path
                       strokeLinecap='round'

@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '../components/CartContext';
 import CartDisplay from '../components/CartDisplay';
+import Link from 'next/link';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,12 +45,12 @@ export default function RootLayout({
               </div>
 
               <nav className='hidden md:flex items-center space-x-6'>
-                <a
-                  href='#'
+                <Link
+                  href='/'
                   className='text-gray-700 hover:text-blue-600 transition-colors'
                 >
                   Home
-                </a>
+                </Link>
                 <a
                   href='#'
                   className='text-gray-700 hover:text-blue-600 transition-colors'

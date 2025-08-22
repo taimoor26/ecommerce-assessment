@@ -1,9 +1,9 @@
 export interface Product {
-  id: any;
-  name: any;
-  price: any;
-  description: any;
-  imageUrl: any;
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl: string;
   sku?: string;
   inventory?: number;
   manufacturer?: string;
@@ -14,7 +14,26 @@ export interface Product {
     depth: number;
   };
   tags?: string[];
-  reviews?: any[];
+  reviews?: Review[];
+}
+
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  author: string;
+  date: string;
+}
+
+export interface ProductsResponse {
+  data: {
+    products: Product[];
+  };
+}
+
+export interface GraphQLError {
+  message: string;
+  code?: string;
 }
 
 const mockProducts: Product[] = [
@@ -74,20 +93,78 @@ const mockProducts: Product[] = [
   },
 ];
 
-export async function fetchProducts(): Promise<any> {
-  return new Promise((resolve) => {
+export async function fetchProducts(): Promise<ProductsResponse> {
+  return new Promise((resolve, reject) => {
+    // Simulate network delay
     setTimeout(() => {
-      const productsWithExtraData = mockProducts.map((p) => ({
-        ...p,
-        sku: `SKU-${p.id}`,
-        inventory: Math.floor(Math.random() * 100),
-        manufacturer: 'Generic Brand',
-        weight: Math.random() * 5,
-        dimensions: { width: 10, height: 10, depth: 10 },
-        tags: ['tag1', 'tag2', 'tag3'],
-        reviews: [],
-      }));
-      resolve({ data: { products: productsWithExtraData } });
+      try {
+        const productsWithExtraData = mockProducts.map((p) => ({
+          ...p,
+          sku: `SKU-${p.id}`,
+          inventory: Math.floor(Math.random() * 100) + 1, // Ensure at least 1 in stock
+          manufacturer: 'StyleStore Brand',
+          weight: Math.round((Math.random() * 5 + 0.1) * 100) / 100, // Round to 2 decimal places
+          dimensions: { 
+            width: Math.floor(Math.random() * 20) + 10, 
+            height: Math.floor(Math.random() * 20) + 10, 
+            depth: Math.floor(Math.random() * 20) + 10 
+          },
+          tags: ['fashion', 'premium', 'trending'],
+          reviews: generateMockReviews(),
+        }));
+        
+        resolve({ data: { products: productsWithExtraData } });
+      } catch (error) {
+        // Log error but don't crash the app
+        console.error('Error generating mock products:', error);
+        // Return empty products instead of crashing
+        resolve({ data: { products: [] } });
+      }
     }, 500);
   });
+}
+
+function generateMockReviews(): Review[] {
+  const reviewCount = Math.floor(Math.random() * 5) + 1;
+  const reviews: Review[] = [];
+  
+  for (let i = 0; i < reviewCount; i++) {
+    reviews.push({
+      id: `review-${i + 1}`,
+      rating: Math.floor(Math.random() * 5) + 1,
+      comment: getRandomReviewComment(),
+      author: getRandomAuthor(),
+      date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    });
+  }
+  
+  return reviews;
+}
+
+function getRandomReviewComment(): string {
+  const comments = [
+    'Great quality product!',
+    'Exactly what I was looking for.',
+    'Fast shipping and excellent service.',
+    'Highly recommend this item.',
+    'Good value for money.',
+    'Perfect fit and comfortable.',
+    'Beautiful design and craftsmanship.',
+    'Exceeded my expectations.',
+  ];
+  return comments[Math.floor(Math.random() * comments.length)];
+}
+
+function getRandomAuthor(): string {
+  const authors = [
+    'Sarah M.',
+    'John D.',
+    'Emily R.',
+    'Michael T.',
+    'Lisa K.',
+    'David P.',
+    'Amanda W.',
+    'Robert L.',
+  ];
+  return authors[Math.floor(Math.random() * authors.length)];
 }
